@@ -79,13 +79,19 @@ case "${1:-} ${2:-}" in
         bash -c 'cd -- "$1" && pwd -P > "$2"' bash "$FM_FAKE_SLOT" "$D/fg"
       fi
     fi
-    printf '{"result":{"pane":{"pane_id":"%s","cwd":"%s","foreground_cwd":"%s"}}}\n' \
-      "${3:-}" "$(cat "$D/cwd")" "$(cat "$D/fg")"
+    if [ -f "$D/fg-null" ]; then
+      printf '{"result":{"pane":{"pane_id":"%s","cwd":"%s","foreground_cwd":null}}}\n' \
+        "${3:-}" "$(cat "$D/cwd")"
+    else
+      printf '{"result":{"pane":{"pane_id":"%s","cwd":"%s","foreground_cwd":"%s"}}}\n' \
+        "${3:-}" "$(cat "$D/cwd")" "$(cat "$D/fg")"
+    fi
     exit 0 ;;
   'pane run' | 'pane send-text')
     payload=${4:-}
     case "$payload" in
       ". '"*"'") staged=${payload#". '"}; staged=${staged%"'"}; [ ! -f "$staged" ] || payload=$(cat "$staged") ;;
+      "bash '"*"'") staged=${payload#"bash '"}; staged=${staged%"'"}; [ ! -f "$staged" ] || payload=$(cat "$staged") ;;
     esac
     case "$payload" in
       'cd -- '*) path=${payload#cd -- }; path=${path#\'}; path=${path%\'}
@@ -96,7 +102,7 @@ case "${1:-} ${2:-}" in
         [ ! -f "$D/delay-reads" ] || exit 0
         [ ! -f "$D/drop-first-cd" ] || [ "$sends" -gt 1 ] || exit 0
         bash -c 'cd -- "$1" && pwd -P > "$2"' bash "$path" "$D/cwd"
-        cp "$D/cwd" "$D/fg" ;;
+        [ -f "$D/fg-null" ] || cp "$D/cwd" "$D/fg" ;;
       *'encode launch-brief'* | *'Firstmate operational input waiting: read'*)
         [ ! -f "$D/launch-send-fails" ] || exit 1
         printf '%s\n' "$payload" > "$D/launched-command"
@@ -140,7 +146,7 @@ run_lease_spawn() {  # <case-dir> <id> [extra spawn args...]
     -u HERDR_TAB_ID -u HERDR_WORKSPACE_ID \
     PATH="$dir/fakebin:$PATH" FM_HOME="$dir/home" FM_FAKE_DIR="$dir/fake" \
     FM_FAKE_SLOT="$dir/slot" HOME="$dir/user-home" CLAUDE_CONFIG_DIR='' \
-    FM_SPAWN_NO_GUARD=1 \
+    FM_SPAWN_NO_GUARD=1 SPAWN_BASH=bash \
     "$SPAWN" "$id" "$dir/project" --backend herdr --mode no-mistakes --yolo off "$@" 2>&1
 }
 
@@ -289,6 +295,18 @@ test_never_moving_worktree_entry() {
   pass "Herdr refuses a never-moving pane with diagnostic context and no launch"
 }
 
+test_windows_null_foreground_cwd_fallback() {
+  local id=lease-win-fg-null dir out status
+  dir=$(make_lease_case "$id")
+  : > "$dir/fake/fg-null"
+  out=$(run_lease_spawn "$dir" "$id"); status=$?
+  expect_code 0 "$status" "a pane whose foreground_cwd is null should settle via the cwd fallback"$'\n'
+"$out"
+  [ -f "$dir/fake/launched-command" ] || fail "the harness did not launch after cwd fallback"
+  pass "Herdr settles a Windows null-foreground_cwd pane via the cwd fallback"
+}
+
+test_windows_null_foreground_cwd_fallback
 test_delayed_worktree_entry
 test_dropped_worktree_entry
 test_never_moving_worktree_entry

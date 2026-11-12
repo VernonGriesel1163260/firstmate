@@ -3205,18 +3205,28 @@ fm_backend_herdr_target_ready() {  # <target>
 # any error. Mirrors tmux's pane_current_path poll used for worktree-path
 # discovery after `treehouse get`.
 #
-# Verified pitfall: `pane get`'s `.result.pane.cwd` is the pane's cwd AT
-# CREATION TIME - the top-level shell's cwd - and does NOT update when that
-# shell `cd`s or enters a subshell (as `treehouse get` does). Reading it here
-# would make fm-spawn.sh's worktree-discovery poll never see the pane "leave"
-# the project directory, since `cwd` stays frozen at the original path forever.
-# `.result.pane.foreground_cwd` tracks the ACTUALLY RUNNING foreground
+# Verified pitfall (Linux/macOS): `pane get`'s `.result.pane.cwd` is the pane's
+# cwd AT CREATION TIME - the top-level shell's cwd - and does NOT update when
+# that shell `cd`s or enters a subshell (as `treehouse get` does). Reading only
+# `cwd` would make fm-spawn.sh's worktree-discovery poll never see the pane
+# "leave" the project directory, since `cwd` stays frozen at the original path
+# forever. `.result.pane.foreground_cwd` tracks the ACTUALLY RUNNING foreground
 # process's cwd instead, which is what changes when `treehouse get` enters its
 # worktree subshell - confirmed live against a real treehouse acquisition.
+#
+# Windows fallback (herdr 0.9.4, 2026-11-13): `foreground_cwd` is null on every
+# pane - the Windows PTY/process model does not expose the foreground
+# process's cwd the way Linux/macOS does. On Windows, `cwd` DOES update after
+# a direct `cd` (confirmed live: `pane get` reports the new path after a
+# top-level `cd -- <path>`), so it is a usable fallback for the spawn path,
+# which moves the top-level shell with an explicit `cd` rather than entering a
+# treehouse subshell. The `//` fallback fires only when `foreground_cwd` is
+# null or absent, so Linux/macOS (where `foreground_cwd` is populated) is
+# unaffected: it never reads the frozen `cwd` there.
 fm_backend_herdr_current_path() {  # <target>
   fm_backend_herdr_target_ready "$1" || return 0
   fm_backend_herdr_cli "$FM_BACKEND_HERDR_SESSION" pane get "$FM_BACKEND_HERDR_PANE" 2>/dev/null \
-    | jq -r '.result.pane.foreground_cwd // empty' 2>/dev/null
+    | jq -r '.result.pane.foreground_cwd // .result.pane.cwd // empty' 2>/dev/null
 }
 
 # fm_backend_herdr_send_text_line: send one line of TEXT then submit,
