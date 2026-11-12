@@ -16,9 +16,11 @@ type LockOwnership = "owned" | "missing" | "other";
 
 const extensionFile = fileURLToPath(import.meta.url);
 const extensionDir = dirname(extensionFile);
-const root = resolve(extensionDir, "../..");
-const fmHome = process.env.FM_HOME || process.env.FM_ROOT_OVERRIDE || root;
-const state = process.env.FM_STATE_OVERRIDE || `${fmHome}/state`;
+// Windows MSYS helper scripts require forward-slash paths.
+const toPosixPath = (p: string) => p.replace(/\\/g, "/");
+const root = toPosixPath(resolve(extensionDir, "../.."));
+const fmHome = toPosixPath(process.env.FM_HOME || process.env.FM_ROOT_OVERRIDE || root);
+const state = toPosixPath(process.env.FM_STATE_OVERRIDE || `${fmHome}/state`);
 const marker = `${state}/.pi-turnend-extension-loaded`;
 const extensionVersion = `sha256:${createHash("sha256").update(readFileSync(extensionFile)).digest("hex")}`;
 

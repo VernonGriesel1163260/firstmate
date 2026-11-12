@@ -1,4 +1,5 @@
 import { spawnSync } from "node:child_process";
+import { existsSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -21,12 +22,39 @@ export type FirstmateCurrentOperationalKind =
 
 type OperationalInputCommand = "encode" | "classify" | "kind";
 
+// Windows: a bare "bash" spawned from a PowerShell-launched pi resolves to
+// WSL's System32\bash.exe (no distributions installed here), and "ps" does not
+// exist on that PATH at all, so helper scripts need the real Git for Windows
+// bash resolved explicitly. FM_BASH overrides the search order for
+// nonstandard installs.
+const WINDOWS_BASH_CANDIDATES = [
+  "C:/Program Files/Git/usr/bin/bash.exe",
+  "C:/Program Files/Git/bin/bash.exe",
+  "C:/Program Files (x86)/Git/usr/bin/bash.exe",
+];
+let cachedBashExe: string | undefined;
+export function firstmateBashExe(): string {
+  if (cachedBashExe) return cachedBashExe;
+  const override = process.env.FM_BASH;
+  if (override && existsSync(override)) return (cachedBashExe = override);
+  for (const candidate of WINDOWS_BASH_CANDIDATES) {
+    if (existsSync(candidate)) return (cachedBashExe = candidate);
+  }
+  return (cachedBashExe = "bash");
+}
+
+// Backslash Windows paths break inside bash; convert args that are existing
+// files so both Node and bash accept them.
+function posixArg(arg: string): string {
+  return arg.includes("\\") && existsSync(arg) ? arg.replace(/\\/g, "/") : arg;
+}
+
 export function firstmateShellInvocation(
   script: string,
   args: readonly string[],
 ): { command: string; args: string[] } {
   return process.platform === "win32"
-    ? { command: "bash", args: [script, ...args] }
+    ? { command: firstmateBashExe(), args: [posixArg(script), ...args.map(posixArg)] }
     : { command: script, args: [...args] };
 }
 

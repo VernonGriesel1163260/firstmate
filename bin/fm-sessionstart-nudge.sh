@@ -37,7 +37,8 @@ lock_is_in_ancestry() {
     # PID 1 can own the session inside a PID namespace; compare it below.
     ''|*[!0-9]*) return 1 ;;
   esac
-  kill -0 "$lock_pid" 2>/dev/null || return 1
+  # Windows/MSYS: kill -0 cannot see native WINPIDs; fall back to a ps probe.
+  kill -0 "$lock_pid" 2>/dev/null || ps -o ppid= -p "$lock_pid" >/dev/null 2>&1 || return 1
   for _ in 1 2 3 4 5 6 7 8; do
     [ "$pid" = "$lock_pid" ] && return 0
     pid=$(fm_ps_ppid "$pid")
