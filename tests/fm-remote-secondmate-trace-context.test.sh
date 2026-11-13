@@ -126,6 +126,7 @@ printf 'codex\n' > "$PARENT/config/crew-harness"
 printf '## In flight\n\n## Queued\n\n## Done\n' > "$PARENT/data/backlog.md"
 
 remote_env() {
+  SPAWN_NO_WIN_BASH=1 \
   FM_HOME="$PARENT" \
   FM_ROOT_OVERRIDE="$REMOTE_ROOT" \
   FM_PROCEVENT_CLAIM_ROOT="$CLAIMS" \
