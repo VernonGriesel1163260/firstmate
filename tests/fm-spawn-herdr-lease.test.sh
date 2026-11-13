@@ -146,7 +146,7 @@ run_lease_spawn() {  # <case-dir> <id> [extra spawn args...]
     -u HERDR_TAB_ID -u HERDR_WORKSPACE_ID \
     PATH="$dir/fakebin:$PATH" FM_HOME="$dir/home" FM_FAKE_DIR="$dir/fake" \
     FM_FAKE_SLOT="$dir/slot" HOME="$dir/user-home" CLAUDE_CONFIG_DIR='' \
-    FM_SPAWN_NO_GUARD=1 SPAWN_BASH=bash \
+    FM_SPAWN_NO_GUARD=1 SPAWN_NO_WIN_BASH=1 \
     "$SPAWN" "$id" "$dir/project" --backend herdr --mode no-mistakes --yolo off "$@" 2>&1
 }
 
@@ -287,7 +287,7 @@ test_never_moving_worktree_entry() {
   [ "$status" -ne 0 ] || fail "a pane that never moves was accepted"
   assert_contains "$out" "not its recorded worktree" "wrong cwd did not refuse"
   assert_contains "$out" "Herdr pane 'default:%9'" "refusal did not identify the pane"
-  assert_contains "$out" "last foreground_cwd='$dir/project'" "refusal lost the last cwd"
+  assert_contains "$out" "last cwd read='$dir/project'" "refusal lost the last cwd"
   assert_contains "$out" "agent_status='shell-starting'" "refusal lost agent status"
   [ "$(cat "$dir/fake/cd-sends")" = 2 ] || fail "a stuck pane received more than one retry"
   [ ! -e "$dir/fake/launched-command" ] || fail "a harness started outside its copy"
@@ -299,7 +299,7 @@ test_windows_null_foreground_cwd_fallback() {
   local id=lease-win-fg-null dir out status
   dir=$(make_lease_case "$id")
   : > "$dir/fake/fg-null"
-  out=$(run_lease_spawn "$dir" "$id"); status=$?
+  out=$(SPAWN_BASH=bash run_lease_spawn "$dir" "$id"); status=$?
   expect_code 0 "$status" "a pane whose foreground_cwd is null should settle via the cwd fallback"$'\n'
 "$out"
   [ -f "$dir/fake/launched-command" ] || fail "the harness did not launch after cwd fallback"
