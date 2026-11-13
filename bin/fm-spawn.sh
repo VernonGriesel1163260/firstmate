@@ -7919,17 +7919,16 @@ if [ "$BACKEND" = t3code ]; then
   fi
 else
 # On Windows (MSYS), the herdr pane shell is PowerShell, where `export` is not
-# a valid command and `. /tmp/.../launch.sh` is not a valid path. Detect this by
-# resolving bash through cygpath -w: on Linux/macOS cygpath is absent and
-# SPAWN_WIN_BASH stays empty, preserving the original pane-export + source
-# form unchanged; on Windows SPAWN_WIN_BASH gets the Git-for-Windows bash path.
+# a valid command and `. /tmp/.../launch.sh` is not a valid path. Only the
+# herdr backend creates PowerShell panes on Windows; tmux and other backends
+# use bash-compatible shells, so the Windows form is scoped to herdr alone.
 # SPAWN_BASH explicitly selects the Windows launch form (used by tests to
 # exercise it on any platform); SPAWN_NO_WIN_BASH=1 explicitly suppresses it
 # (used by tests that need the original pane-export + source form on MSYS).
 SPAWN_WIN_BASH=
 if [ -n "${SPAWN_BASH:-}" ]; then
   SPAWN_WIN_BASH=$SPAWN_BASH
-elif [ -z "${SPAWN_NO_WIN_BASH:-}" ]; then
+elif [ -z "${SPAWN_NO_WIN_BASH:-}" ] && [ "$BACKEND" = herdr ]; then
   SPAWN_WIN_BASH=$(cygpath -w "$(command -v bash)" 2>/dev/null || printf '')
 fi
 if [ -n "$SPAWN_WIN_BASH" ]; then
@@ -8128,14 +8127,7 @@ else
   # PowerShell resolves to WSL's System32 bash.exe, which cannot find MSYS
   # paths, so the resolved Windows path is required.
   if [ -n "${SPAWN_WIN_BASH:-}" ]; then
-    # PowerShell needs the `&` call operator when the bash path contains spaces
-    # (e.g. C:\Program Files\Git\...). A simple name like `bash` (used by the
-    # test fake) does not, and `& bash '<file>'` works in PowerShell too, but
-    # `bash '<file>'` also works and keeps the test fake's pattern simpler.
-    case "$SPAWN_WIN_BASH" in
-      *' '*|*'\\'*) LAUNCH_SOURCE_TEXT="& $(shell_quote "$SPAWN_WIN_BASH") $(shell_quote "$LAUNCH_FILE")" ;;
-      *) LAUNCH_SOURCE_TEXT="$SPAWN_WIN_BASH $(shell_quote "$LAUNCH_FILE")" ;;
-    esac
+    LAUNCH_SOURCE_TEXT="& $(shell_quote "$SPAWN_WIN_BASH") $(shell_quote "$LAUNCH_FILE")"
   else
     LAUNCH_SOURCE_TEXT=". $(shell_quote "$LAUNCH_FILE")"
   fi

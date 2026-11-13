@@ -91,7 +91,7 @@ case "${1:-} ${2:-}" in
     payload=${4:-}
     case "$payload" in
       ". '"*"'") staged=${payload#". '"}; staged=${staged%"'"}; [ ! -f "$staged" ] || payload=$(cat "$staged") ;;
-      "bash '"*"'") staged=${payload#"bash '"}; staged=${staged%"'"}; [ ! -f "$staged" ] || payload=$(cat "$staged") ;;
+      "& '"*) staged=$(printf %s "$payload" | cut -d"'" -f4); [ ! -f "$staged" ] || payload=$(cat "$staged") ;;
     esac
     case "$payload" in
       'cd -- '*) path=${payload#cd -- }; path=${path#\'}; path=${path%\'}
@@ -300,8 +300,7 @@ test_windows_null_foreground_cwd_fallback() {
   dir=$(make_lease_case "$id")
   : > "$dir/fake/fg-null"
   out=$(SPAWN_BASH=bash run_lease_spawn "$dir" "$id"); status=$?
-  expect_code 0 "$status" "a pane whose foreground_cwd is null should settle via the cwd fallback"$'\n'
-"$out"
+  expect_code 0 "$status" "a pane whose foreground_cwd is null should settle via the cwd fallback"$'\n'"$out"
   [ -f "$dir/fake/launched-command" ] || fail "the harness did not launch after cwd fallback"
   pass "Herdr settles a Windows null-foreground_cwd pane via the cwd fallback"
 }
