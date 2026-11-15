@@ -7943,6 +7943,12 @@ if [ -n "$SPAWN_WIN_BASH" ]; then
   if [ "$KIND" = ship ] || [ "$KIND" = scout ]; then
     LAUNCH_PRELUDE="$LAUNCH_PRELUDE; export FM_TASK_ID=$ID"
   fi
+  # The agent process resolves its shell on Windows by trying the exported
+  # BASH before PATH (docs/extension-bindings.md "Bash binding"). A PATH
+  # probe from a PowerShell pane finds WSL's System32\bash.exe first and
+  # fails ("execvpe /bin/bash failed 2"), so export the same Git-for-Windows
+  # bash this launch file runs under for the agent to bind instead.
+  LAUNCH_PRELUDE="$LAUNCH_PRELUDE; export BASH=$(shell_quote "$SPAWN_WIN_BASH")"
   if [ -n "$SPAWN_TRACEPARENT" ]; then
     if spawn_record_traceparent; then
       LAUNCH_PRELUDE="$LAUNCH_PRELUDE; export TRACEPARENT=$SPAWN_TRACEPARENT"
