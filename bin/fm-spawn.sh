@@ -7954,6 +7954,13 @@ if [ -n "$SPAWN_WIN_BASH" ]; then
   # its own directory, so the agent and every launch child bind Git bash first
   # no matter how the pane's environment was ordered.
   LAUNCH_PRELUDE="$LAUNCH_PRELUDE; export BASH=$(shell_quote "$SPAWN_WIN_BASH"); export PATH=$(shell_quote "$(dirname "$(command -v bash)")"):\$PATH"
+  # Propagate the spawner's BASH_ENV when set: a machine's non-interactive
+  # bash adapter setup (for example a local ps/ln adapter PATH prepend) must
+  # reach every bash the agent spawns, or identity probes and pid-fallback
+  # smokes silently run against stock MSYS tools that lack those options.
+  if [ -n "${BASH_ENV:-}" ]; then
+    LAUNCH_PRELUDE="$LAUNCH_PRELUDE; export BASH_ENV=$(shell_quote "$BASH_ENV")"
+  fi
   if [ -n "$SPAWN_TRACEPARENT" ]; then
     if spawn_record_traceparent; then
       LAUNCH_PRELUDE="$LAUNCH_PRELUDE; export TRACEPARENT=$SPAWN_TRACEPARENT"
