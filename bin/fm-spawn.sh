@@ -7944,11 +7944,16 @@ if [ -n "$SPAWN_WIN_BASH" ]; then
     LAUNCH_PRELUDE="$LAUNCH_PRELUDE; export FM_TASK_ID=$ID"
   fi
   # The agent process resolves its shell on Windows by trying the exported
-  # BASH before PATH (docs/extension-bindings.md "Bash binding"). A PATH
-  # probe from a PowerShell pane finds WSL's System32\bash.exe first and
-  # fails ("execvpe /bin/bash failed 2"), so export the same Git-for-Windows
-  # bash this launch file runs under for the agent to bind instead.
-  LAUNCH_PRELUDE="$LAUNCH_PRELUDE; export BASH=$(shell_quote "$SPAWN_WIN_BASH")"
+  # BASH before PATH (docs/extension-bindings.md "Bash binding"), and the
+  # launch's own children resolve `bash`, `timeout`, and other tools through
+  # PATH. A pane whose PowerShell inherited a fresh Windows PATH has System32
+  # before Git, where bare `bash` is WSL's broken System32\bash.exe
+  # ("execvpe /bin/bash failed 2") and `timeout` is the unrelated Windows
+  # command, because a non-login bash does not re-sort the inherited PATH.
+  # Export the Git-for-Windows bash this launch file runs under and prepend
+  # its own directory, so the agent and every launch child bind Git bash first
+  # no matter how the pane's environment was ordered.
+  LAUNCH_PRELUDE="$LAUNCH_PRELUDE; export BASH=$(shell_quote "$SPAWN_WIN_BASH"); export PATH=$(shell_quote "$(dirname "$(command -v bash)")"):\$PATH"
   if [ -n "$SPAWN_TRACEPARENT" ]; then
     if spawn_record_traceparent; then
       LAUNCH_PRELUDE="$LAUNCH_PRELUDE; export TRACEPARENT=$SPAWN_TRACEPARENT"
