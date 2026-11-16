@@ -5621,7 +5621,7 @@ spawn_assert_agent_worktree() {
   echo "error: task $ID's worker started in '${seen:-unknown}', not its recorded worktree '$WT'; refusing to continue outside the copy holding its work" >&2
   if [ "$BACKEND" = herdr ] && fm_backend_herdr_parse_target "$WT_TARGET"; then
     agent_status=$(fm_backend_herdr_agent_status_raw "$FM_BACKEND_HERDR_SESSION" "$FM_BACKEND_HERDR_PANE")
-    echo "error: Herdr pane '$WT_TARGET': last foreground_cwd='${seen:-unknown}', agent_status='${agent_status:-unknown}'" >&2
+    echo "error: Herdr pane '$WT_TARGET': last cwd read='${seen:-unknown}', agent_status='${agent_status:-unknown}'" >&2
   fi
   exit 1
 }
@@ -7929,6 +7929,59 @@ if [ "$BACKEND" = t3code ]; then
     }
   fi
 else
+# On Windows (MSYS), the herdr pane shell is PowerShell, where `export` is not
+# a valid command and `. /tmp/.../launch.sh` is not a valid path. Only the
+# herdr backend creates PowerShell panes on Windows; tmux and other backends
+# use bash-compatible shells, so the Windows form is scoped to herdr alone.
+# SPAWN_BASH explicitly selects the Windows launch form (used by tests to
+# exercise it on any platform); SPAWN_NO_WIN_BASH=1 explicitly suppresses it
+# (used by tests that need the original pane-export + source form on MSYS).
+SPAWN_WIN_BASH=
+if [ -n "${SPAWN_BASH:-}" ]; then
+  SPAWN_WIN_BASH=$SPAWN_BASH
+elif [ -z "${SPAWN_NO_WIN_BASH:-}" ] && [ "$BACKEND" = herdr ]; then
+  SPAWN_WIN_BASH=$(cygpath -w "$(command -v bash)" 2>/dev/null || printf '')
+fi
+if [ -n "$SPAWN_WIN_BASH" ]; then
+  # Windows: exports go into the launch file as a prelude (PowerShell cannot
+  # run `export`), and the launch file is invoked with the resolved bash via
+  # PowerShell's `&` call operator. The T3 path above carries the same facts
+  # as harness config for the same reason: no pane shell to export into.
+  LAUNCH_PRELUDE="export GOTMPDIR=$(shell_quote "$TASK_TMP/gotmp"); export COMPACT_ADVISER_DISABLE=1"
+  if [ "$LAVISH_AXI_HOST_CONFIG_PRESENT" = 1 ]; then
+    LAUNCH_PRELUDE="$LAUNCH_PRELUDE; export LAVISH_AXI_HOST=$(shell_quote "$LAVISH_AXI_HOST")"
+  fi
+  if [ "$KIND" = ship ] || [ "$KIND" = scout ]; then
+    LAUNCH_PRELUDE="$LAUNCH_PRELUDE; export FM_TASK_ID=$ID"
+  fi
+  # The agent process resolves its shell on Windows by trying the exported
+  # BASH before PATH (docs/extension-bindings.md "Bash binding"), and the
+  # launch's own children resolve `bash`, `timeout`, and other tools through
+  # PATH. A pane whose PowerShell inherited a fresh Windows PATH has System32
+  # before Git, where bare `bash` is WSL's broken System32\bash.exe
+  # ("execvpe /bin/bash failed 2") and `timeout` is the unrelated Windows
+  # command, because a non-login bash does not re-sort the inherited PATH.
+  # Export the Git-for-Windows bash this launch file runs under and prepend
+  # its own directory, so the agent and every launch child bind Git bash first
+  # no matter how the pane's environment was ordered.
+  LAUNCH_PRELUDE="$LAUNCH_PRELUDE; export BASH=$(shell_quote "$SPAWN_WIN_BASH"); export PATH=$(shell_quote "$(dirname "$(command -v bash)")"):\$PATH"
+  # Propagate the spawner's BASH_ENV when set: a machine's non-interactive
+  # bash adapter setup (for example a local ps/ln adapter PATH prepend) must
+  # reach every bash the agent spawns, or identity probes and pid-fallback
+  # smokes silently run against stock MSYS tools that lack those options.
+  if [ -n "${BASH_ENV:-}" ]; then
+    LAUNCH_PRELUDE="$LAUNCH_PRELUDE; export BASH_ENV=$(shell_quote "$BASH_ENV")"
+  fi
+  if [ -n "$SPAWN_TRACEPARENT" ]; then
+    if spawn_record_traceparent; then
+      LAUNCH_PRELUDE="$LAUNCH_PRELUDE; export TRACEPARENT=$SPAWN_TRACEPARENT"
+    else
+      LAUNCH="unset TRACEPARENT; $LAUNCH"
+    fi
+  fi
+else
+  # Linux/macOS: export into the pane shell before sourcing, the original form.
+  LAUNCH_PRELUDE=
 # Export GOTMPDIR into the crewmate's pane shell so the agent and every child
 # process (go build, go test, ...) inherit it. Sent before the launch command so
 # the env is set when the agent starts; the brief sleep lets the export land.
@@ -7964,6 +8017,7 @@ if [ -n "$SPAWN_TRACEPARENT" ]; then
     fi
     LAUNCH="unset TRACEPARENT; $LAUNCH"
   fi
+fi
 fi
 fi
 if [ "$LAUNCH_ENV_ENABLED" = 1 ]; then
@@ -8051,7 +8105,7 @@ else
     echo "error: task launch file $LAUNCH_FILE already exists; refusing to replace it" >&2
     exit 1
   fi
-  if ! (umask 077 && printf '%s\n' "$LAUNCH" >"$LAUNCH_STAGE" &&
+  if ! (umask 077 && printf '%s\n%s\n' "${LAUNCH_PRELUDE:-}" "$LAUNCH" >"$LAUNCH_STAGE" &&
     chmod 0600 "$LAUNCH_STAGE" && mv -f "$LAUNCH_STAGE" "$LAUNCH_FILE"); then
     rm -f "$LAUNCH_STAGE"
     echo "error: could not stage the launch command at $LAUNCH_FILE" >&2
@@ -8094,7 +8148,18 @@ else
   SPAWN_LAUNCH_SENT=1
   # errexit is on here: a failed send still exits, and Orca source mode first
   # removes the credential-bearing file the pane never received.
-  LAUNCH_SOURCE_TEXT=". $(shell_quote "$LAUNCH_FILE")"
+  # Linux/macOS: source the launch file with `.`, the original form that every
+  # pane shell (bash/zsh) and every test fake recognizes. Windows: invoke the
+  # launch file with the resolved Git-for-Windows bash via PowerShell's `&` call
+  # operator, because the herdr pane shell is PowerShell where `. /tmp/...` is
+  # not a valid path and `.` is not the source operator. Bare `bash` in
+  # PowerShell resolves to WSL's System32 bash.exe, which cannot find MSYS
+  # paths, so the resolved Windows path is required.
+  if [ -n "${SPAWN_WIN_BASH:-}" ]; then
+    LAUNCH_SOURCE_TEXT="& $(shell_quote "$SPAWN_WIN_BASH") $(shell_quote "$LAUNCH_FILE")"
+  else
+    LAUNCH_SOURCE_TEXT=". $(shell_quote "$LAUNCH_FILE")"
+  fi
   if [ "$ORCA_LAUNCH_ENV_ENABLED" = 1 ]; then
     # A refused source-mode launch fails the source command, and some shells exit
     # under errexit on sourcing a file spawn already reclaimed even inside ||, so

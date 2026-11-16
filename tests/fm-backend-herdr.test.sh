@@ -4247,6 +4247,20 @@ test_current_path_reads_cwd() {
   pass "fm_backend_herdr_current_path: reads pane foreground_cwd (the live running process), not the frozen creation-time cwd"
 }
 
+test_current_path_falls_back_to_cwd_when_foreground_cwd_null() {
+  local dir log resp fb out
+  dir="$TMP_ROOT/cwd-fallback"; mkdir -p "$dir/responses"; log="$dir/log"; resp="$dir/responses"; : > "$log"
+  # Windows (herdr 0.9.4, 2026-11-13): foreground_cwd is null on every pane; cwd
+  # updates after a direct cd and is the usable fallback for spawn, which moves
+  # the top-level shell explicitly rather than entering a treehouse subshell.
+  printf '{"result":{"pane":{"cwd":"/tmp/windows-updated-cwd","foreground_cwd":null}}}\n' > "$resp/1.out"
+  fb=$(make_herdr_fakebin "$dir")
+  out=$( PATH="$fb:$PATH" FM_HERDR_LOG="$log" FM_HERDR_RESPONSES="$resp" \
+    bash -c '. "$0/bin/backends/herdr.sh"; fm_backend_herdr_current_path default:w1:p2' "$ROOT" )
+  [ "$out" = "/tmp/windows-updated-cwd" ] || fail "current_path should fall back to cwd when foreground_cwd is null, got '$out'"
+  pass "fm_backend_herdr_current_path: falls back to cwd when foreground_cwd is null (Windows)"
+}
+
 # --- busy_state (semantic agent state) ---------------------------------------
 
 test_busy_state_working_maps_to_busy() {
@@ -6685,6 +6699,7 @@ test_capture_preserves_pane_read_failure
 test_send_key_normalizes_and_targets_pane
 test_kill_is_best_effort
 test_current_path_reads_cwd
+test_current_path_falls_back_to_cwd_when_foreground_cwd_null
 test_busy_state_working_maps_to_busy
 test_busy_state_done_and_blocked_map_to_idle
 test_busy_state_unknown_on_no_agent

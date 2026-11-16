@@ -133,15 +133,18 @@ import {
 import {
   classifyFirstmateOperationalText,
   encodeFirstmateOperationalInputWith,
+  firstmateBashExe,
 } from "./lib/fm-operational-input.ts";
 
 const extensionFile = fileURLToPath(import.meta.url);
 const extensionDir = dirname(extensionFile);
-const root = resolve(extensionDir, "../..");
-const fmHome = process.env.FM_HOME || process.env.FM_ROOT_OVERRIDE || root;
-const fmRoot = process.env.FM_ROOT_OVERRIDE || root;
-const state = process.env.FM_STATE_OVERRIDE || `${fmHome}/state`;
-const config = process.env.FM_CONFIG_OVERRIDE || `${fmHome}/config`;
+// Windows MSYS helper scripts require forward-slash paths.
+const toPosixPath = (p: string) => p.replace(/\\/g, "/");
+const root = toPosixPath(resolve(extensionDir, "../.."));
+const fmHome = toPosixPath(process.env.FM_HOME || process.env.FM_ROOT_OVERRIDE || root);
+const fmRoot = toPosixPath(process.env.FM_ROOT_OVERRIDE || root);
+const state = toPosixPath(process.env.FM_STATE_OVERRIDE || `${fmHome}/state`);
+const config = toPosixPath(process.env.FM_CONFIG_OVERRIDE || `${fmHome}/config`);
 const sessionsDir = join(state, "branch-session");
 const sessionPointer = join(state, ".branch-session");
 const mirrorCursorFile = join(state, ".branch-mirror-cursor");
@@ -946,7 +949,7 @@ export default function (pi: ExtensionAPI) {
   // keep them). One bulk release per generation, at activation.
   async function releaseBranchLeases(expectedGeneration: number): Promise<boolean> {
     if (!(await generationOwnsLock(expectedGeneration))) return false;
-    const result = await runCommandAsync("bash", [leaseScript, "release-actor", "--actor", "branch"], {
+    const result = await runCommandAsync(firstmateBashExe(), [leaseScript, "release-actor", "--actor", "branch"], {
       cwd: fmRoot,
       env: { ...scriptEnv, FM_SUPERVISION_ACTOR: "branch" },
     });
@@ -976,7 +979,7 @@ export default function (pi: ExtensionAPI) {
   }
 
   async function runOutcomeScript(args: string[]): Promise<{ ok: boolean; stdout: string; detail: string }> {
-    const result = await runCommandAsync("bash", [outcomeScript, ...args], {
+    const result = await runCommandAsync(firstmateBashExe(), [outcomeScript, ...args], {
       cwd: fmRoot,
       env: scriptEnv,
     });
@@ -1309,7 +1312,7 @@ export default function (pi: ExtensionAPI) {
     // captain's current choices authoritative on all of them.
     const pinned = await branchModelSelection();
     const effort = branchEffortSelection(pinned?.model);
-    const prompt = await runCommandAsync("bash", [promptScript], {
+    const prompt = await runCommandAsync(firstmateBashExe(), [promptScript], {
       cwd: fmRoot,
       env: scriptEnv,
       maxBuffer: 4 * 1024 * 1024,

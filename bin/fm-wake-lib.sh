@@ -71,7 +71,8 @@ fm_pid_alive() {
   case "$pid" in
     ''|*[!0-9]*) return 1 ;;
   esac
-  kill -0 "$pid" 2>/dev/null
+  # Windows/MSYS: kill -0 cannot see native WINPIDs; fall back to a ps probe.
+  kill -0 "$pid" 2>/dev/null || ps -o ppid= -p "$pid" >/dev/null 2>&1
 }
 
 # Store field 22 of a Linux-compatible /proc stat file (the process start in

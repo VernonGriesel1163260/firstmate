@@ -57,7 +57,7 @@ import {
   calmTranscriptClassIsVisible,
   FIRSTMATE_CALM_PRESENTATION_EVENT,
 } from "./lib/fm-calm-visibility.ts";
-import { encodeFirstmateOperationalInput } from "./lib/fm-operational-input.ts";
+import { encodeFirstmateOperationalInput, firstmateBashExe } from "./lib/fm-operational-input.ts";
 
 type ArmResult = {
   ok: boolean;
@@ -160,11 +160,13 @@ function refreshWatchToolShell(
 
 const extensionFile = fileURLToPath(import.meta.url);
 const extensionDir = dirname(extensionFile);
-const root = resolve(extensionDir, "../..");
-const fmHome = process.env.FM_HOME || process.env.FM_ROOT_OVERRIDE || root;
-const fmRoot = process.env.FM_ROOT_OVERRIDE || root;
-const state = process.env.FM_STATE_OVERRIDE || `${fmHome}/state`;
-const config = process.env.FM_CONFIG_OVERRIDE || `${fmHome}/config`;
+// Windows MSYS helper scripts require forward-slash paths.
+const toPosixPath = (p: string) => p.replace(/\\/g, "/");
+const root = toPosixPath(resolve(extensionDir, "../.."));
+const fmHome = toPosixPath(process.env.FM_HOME || process.env.FM_ROOT_OVERRIDE || root);
+const fmRoot = toPosixPath(process.env.FM_ROOT_OVERRIDE || root);
+const state = toPosixPath(process.env.FM_STATE_OVERRIDE || `${fmHome}/state`);
+const config = toPosixPath(process.env.FM_CONFIG_OVERRIDE || `${fmHome}/config`);
 const armScript = `${fmRoot}/bin/fm-watch-arm.sh`;
 const marker = `${state}/.pi-watch-extension-loaded`;
 const handoffDir = `${state}/extensions/pi-primary-watch`;
@@ -731,7 +733,7 @@ export default function (pi: ExtensionAPI) {
   } {
     try {
       const result = spawnSync(
-        "bash",
+        firstmateBashExe(),
         [armScript, "--handling-delivered", recovery.generation, "--watcher-pid", recovery.watcherPid],
         {
           cwd: fmRoot,
@@ -1196,7 +1198,7 @@ export default function (pi: ExtensionAPI) {
       FM_WATCH_ARM_SCRIPT: armScript,
       FM_WATCH_PREDECESSOR_ARM_PID: predecessorArmPid,
     };
-    const armChild = spawn("bash", ["-lc", "config_dir=\"${FM_CONFIG_OVERRIDE:-$FM_HOME/config}\"; [ -f \"$config_dir/x-mode.env\" ] && . \"$config_dir/x-mode.env\"; exec \"$FM_WATCH_ARM_SCRIPT\" --restart"], {
+    const armChild = spawn(firstmateBashExe(), ["-lc", "config_dir=\"${FM_CONFIG_OVERRIDE:-$FM_HOME/config}\"; [ -f \"$config_dir/x-mode.env\" ] && . \"$config_dir/x-mode.env\"; exec \"$FM_WATCH_ARM_SCRIPT\" --restart"], {
       cwd: fmRoot,
       env,
       stdio: ["ignore", "pipe", "pipe"],
