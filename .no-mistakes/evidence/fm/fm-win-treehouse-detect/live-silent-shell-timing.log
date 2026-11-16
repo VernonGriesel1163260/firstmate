@@ -1,0 +1,2 @@
+EXIT=1 ELAPSED=61s PROBES=10
+error: treehouse get did not enter an isolated worktree within 60s (last seen 'none': the pane reported no path; spawning project '/tmp/fm-live-timing.qelhw0/live/project'); inspect window firstmate:fm-dbg-live

@@ -1,0 +1,12 @@
+fm-gate-refuse: gate agent lifecycle permitted only against lab home /tmp/fm-lab.0t4ciU
+warning: /tmp/fm-lab.0t4ciU/data/spawn-lab-w1/launch-brief.md records no ship branch; defaulting to legacy branch fm/spawn-lab-w1
+warning: /tmp/fm-lab.0t4ciU/data/spawn-lab-w1/launch-brief.md records no delivery contract line (scaffolded before ship briefs recorded one); launching on the explicit --mode no-mistakes - confirm its definition of done matches
+warning: herdr presentation focus lock unavailable; using the ordinary flat layout without projection
+A new version of treehouse is available: v2.1.1 → v3.1.8
+Run "treehouse update" to update
+
+🌳 Setting up worktree...
+🌳 Leased worktree at ~\AppData\Local\Temp\fm-lab.0t4ciU\project\.treehouse\project-586b0d\1\project. Run 'treehouse return ~\AppData\Local\Temp\fm-lab.0t4ciU\project\.treehouse\project-586b0d\1\project' to release it.
+error: task spawn-lab-w1's worker started in 'unknown', not its recorded worktree '~\AppData\Local\Temp\fm-lab.0t4ciU\project\.treehouse\project-586b0d\1\project'; refusing to continue outside the copy holding its work
+error: Herdr pane 'fm-lab-labspawn-970214-29905:w1:p2': last foreground_cwd='unknown', agent_status='unknown'
+warning: the worktree ~\AppData\Local\Temp\fm-lab.0t4ciU\project\.treehouse\project-586b0d\1\project stays leased to spawn-lab-w1 after the failed spawn; once inspected, run 'treehouse return --force ~\AppData\Local\Temp\fm-lab.0t4ciU\project\.treehouse\project-586b0d\1\project' from /tmp/fm-lab.0t4ciU/project

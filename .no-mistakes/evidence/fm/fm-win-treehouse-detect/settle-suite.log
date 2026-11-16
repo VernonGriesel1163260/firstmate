@@ -1,0 +1,12 @@
+=== fm-spawn-worktree-settle.test.sh (worktree state, Linux container) ===
+ok - a single transient stale pane_current_path read is not accepted as the worktree
+ok - an already-settled pane confirms on the next read, not a whole extra cycle
+ok - a transient primary-checkout pane read is not accepted as the worktree
+ok - a pane stuck on the primary checkout fails loudly at the deadline
+ok - a project with an unborn HEAD is refused at once with its cause named
+ok - Windows accepts a shell reply redirected as UTF-16 with a byte-order mark
+ok - Windows accepts a proven isolated worktree while the parent process cwd never moves
+ok - Windows refuses the primary checkout even when Git inside the shell reports it
+ok - Windows refuses a missing shell reply instead of trusting a stale process cwd
+# all fm-spawn-worktree-settle tests passed
+exit=0

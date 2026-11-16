@@ -1,0 +1,46 @@
+PS ~\AppData\Local\Temp\fm-lab.0t4ciU\project> cd -- '~\AppData\Local\Temp\fm-lab.0t4ciU\proj
+ect\.treehouse\project-586b0d\1\project'
+PS ~\AppData\Local\Temp\fm-lab.0t4ciU\project\.treehouse\project-586b0d\1\project> git rev-parse --show-to
+plevel > "~/AppData/Local/Temp/fm-spawn-path.bN8RjhT5/root"
+PS ~\AppData\Local\Temp\fm-lab.0t4ciU\project\.treehouse\project-586b0d\1\project> export GOTMPDIR=/tmp/fm
+-spawn-lab-w2/gotmp
+export : The term 'export' is not recognized as the name of a cmdlet, function, script file, or operable program.
+Check the spelling of the name, or if a path was included, verify that the path is correct and try again.
+At line:1 char:1
++ export GOTMPDIR=/tmp/fm-spawn-lab-w2/gotmp
++ ~~~~~~
+    + CategoryInfo          : ObjectNotFound: (export:String) [], CommandNotFoundException
+    + FullyQualifiedErrorId : CommandNotFoundException
+
+PS ~\AppData\Local\Temp\fm-lab.0t4ciU\project\.treehouse\project-586b0d\1\project> export COMPACT_ADVISER_
+DISABLE=1
+export : The term 'export' is not recognized as the name of a cmdlet, function, script file, or operable program.
+Check the spelling of the name, or if a path was included, verify that the path is correct and try again.
+At line:1 char:1
++ export COMPACT_ADVISER_DISABLE=1
++ ~~~~~~
+    + CategoryInfo          : ObjectNotFound: (export:String) [], CommandNotFoundException
+    + FullyQualifiedErrorId : CommandNotFoundException
+
+PS ~\AppData\Local\Temp\fm-lab.0t4ciU\project\.treehouse\project-586b0d\1\project> export FM_TASK_ID=spawn
+-lab-w2
+export : The term 'export' is not recognized as the name of a cmdlet, function, script file, or operable program.
+Check the spelling of the name, or if a path was included, verify that the path is correct and try again.
+At line:1 char:1
++ export FM_TASK_ID=spawn-lab-w2
++ ~~~~~~
+    + CategoryInfo          : ObjectNotFound: (export:String) [], CommandNotFoundException
+    + FullyQualifiedErrorId : CommandNotFoundException
+
+PS ~\AppData\Local\Temp\fm-lab.0t4ciU\project\.treehouse\project-586b0d\1\project> . '/tmp/fm-spawn-lab-w2
++edb3ff7afd8848dc0846ccbd09345b2abd68dc1298182c3989c20cb3a821f5d5/launch.s1794792008.1043516.1885.sh'
+. : The term '/tmp/fm-spawn-lab-w2+edb3ff7afd8848dc0846ccbd09345b2abd68dc1298182c3989c20cb3a821f5d5/launch.s1794792008
+.1043516.1885.sh' is not recognized as the name of a cmdlet, function, script file, or operable program. Check the
+spelling of the name, or if a path was included, verify that the path is correct and try again.
+At line:1 char:3
++ . '/tmp/fm-spawn-lab-w2+edb3ff7afd8848dc0846ccbd09345b2abd68dc1298182 ...
++   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : ObjectNotFound: (/tmp/fm-spawn-l...1043516.1885.sh:String) [], CommandNotFoundException
+    + FullyQualifiedErrorId : CommandNotFoundException
+
+PS ~\AppData\Local\Temp\fm-lab.0t4ciU\project\.treehouse\project-586b0d\1\project>
