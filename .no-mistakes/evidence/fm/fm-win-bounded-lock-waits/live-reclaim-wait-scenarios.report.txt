@@ -1,0 +1,15 @@
+== S5 ordinary fm_lock_acquire_wait (no flag) on MINGW refuses unreapable stale lock ==
+lock: /tmp/fm-reclaim.pjGcfN/s5/.acquire.lock
+exit=1 elapsed_ms=6556
+--- stderr ---
+error: cannot reclaim lock directory /tmp/fm-reclaim.pjGcfN/s5/.acquire.lock; holder pid=unknown; inspect contents and permissions
+--- lock preserved ---
+unrecognized-record
+S5 RESULT: PASS (bounded named refusal, contents preserved)
+
+== S6 POSIX-mode ordinary wait survives past the 2s Windows bound and acquires ==
+lock: /tmp/fm-reclaim.pjGcfN/s6/.acquire.lock
+exit=0 elapsed_ms=7065 (must exceed the 2000ms Windows bound)
+--- stderr ---
+S6 RESULT: PASS (POSIX wait unbounded by the Windows refusal; acquired after reap)
+

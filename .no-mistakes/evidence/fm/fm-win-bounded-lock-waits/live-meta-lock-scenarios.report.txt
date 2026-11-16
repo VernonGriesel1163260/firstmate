@@ -1,0 +1,75 @@
+== S0 fresh complete acquires metadata lock fast (no contention) ==
+exit=0 elapsed_ms=4312
+--- stderr ---
+--- stdout ---
+complete: sample-origin captain-call inventory reviewed
+--- state after ---
+sample-origin.meta
+--- meta after ---
+decisions_reviewed=1
+decision_keys=
+S0 RESULT: PASS (bounded change leaves ordinary acquisition immediate)
+
+== S1 complete bounded refusal, direct holder pid published in lock dir ==
+exit=1 elapsed_ms=10566 (default bound, no FM_CAPTAIN_META_LOCK_BOUND in env)
+--- stderr ---
+error: origin metadata lock acquisition failed after 10s: /tmp/fm-live-lock.wHGera/s1/state/.meta-sample-origin.lock; holder pid=1623348; inspect contents and permissions
+--- state after ---
+.meta-sample-origin.lock
+sample-origin.meta
+--- meta after ---
+decisions_reviewed=1
+decision_keys=
+S1 RESULT: PASS
+
+== S2 complete refusal names hidden nested .lock.owner.* holder ==
+exit=1 elapsed_ms=5522 (FM_CAPTAIN_META_LOCK_BOUND=2)
+--- stderr ---
+error: origin metadata lock acquisition failed after 2s: /tmp/fm-live-lock.wHGera/s2/state/.meta-sample-origin.lock; holder pid=unknown; inspect contents and permissions
+  owner=/tmp/fm-live-lock.wHGera/s2/state/.meta-sample-origin.lock/.meta-sample-origin.lock.owner.fixture holder pid=1624104
+--- state after ---
+.meta-sample-origin.lock
+sample-origin.meta
+--- meta after ---
+decisions_reviewed=1
+decision_keys=
+S2 RESULT: PASS
+
+== S3 verify remains lock-free while metadata lock held (same held lock as S2) ==
+exit=0 elapsed_ms=3045
+--- stdout ---
+verified: sample-origin captain-call inventory
+--- state after ---
+.meta-sample-origin.lock
+sample-origin.meta
+--- meta after ---
+decisions_reviewed=1
+decision_keys=
+S3 RESULT: PASS
+
+== S4 invalid FM_CAPTAIN_META_LOCK_BOUND named refusal (no contention) ==
+bound='abc' exit=1 elapsed_ms=761
+--- stderr ---
+fm-captain-hold: FM_CAPTAIN_META_LOCK_BOUND must be positive integer seconds
+--- state after ---
+sample-origin.meta
+--- meta after ---
+decisions_reviewed=1
+decision_keys=
+S4(bound='abc') RESULT: PASS
+bound='0' exit=1 elapsed_ms=730
+--- stderr ---
+fm-captain-hold: FM_CAPTAIN_META_LOCK_BOUND must be positive integer seconds
+--- state after ---
+sample-origin.meta
+--- meta after ---
+decisions_reviewed=1
+decision_keys=
+S4(bound='0') RESULT: PASS
+
+== S4b empty FM_CAPTAIN_META_LOCK_BOUND uses documented default 10 ==
+exit=1 elapsed_ms=10808 (FM_CAPTAIN_META_LOCK_BOUND set to empty string)
+--- stderr ---
+error: origin metadata lock acquisition failed after 10s: /tmp/fm-live-lock.wHGera/s4b-17924/state/.meta-sample-origin.lock; holder pid=1624900; inspect contents and permissions
+S4b RESULT: PASS (empty bound resolves to the documented default)
+
